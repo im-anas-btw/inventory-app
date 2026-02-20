@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MyStock Enterprise | 800+ Edition</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+    <style>
+        /* ========================================
+           CORE DESIGN SYSTEM
+           ========================================
+        */
+        :root {
+            /* Primary Indigo Palette */
+            --p: #6366f1;
+            --p-h: #4f46e5;
+            --p-l: rgba(99, 102, 241, 0.15);
+            
+            /* Dark Theme Defaults */
+            --bg: #020617;
+            --card: #0f172a;
+            --txt: #f8fafc;
+            --txt-m: #94a3b8;
+            
+            /* UI States */
+            --err: #ef4444;
+            --suc: #10b981;
+            --warn: #f59e0b;
+            --border: #1e293b;
+            
+            /* Shapes */
+            --radius-lg: 24px;
+            --radius-md: 16px;
+            --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+            --ctx-bg: rgba(15, 23, 42, 0.95);
+        }
+
+        /* Light Theme Overrides */
+        [data-theme='light'] {
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --txt: #0f172a;
+            --txt-m: #64748b;
+            --border: #e2e8f0;
+            --ctx-bg: rgba(255, 255, 255, 0.95);
+            --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* ========================================
+           GLOBAL RESET & LAYOUT
+           ========================================
+        */
+        * {
+            box-sizing: border-box;
+            margin: 0; padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--txt);
+            transition: background 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* ========================================
+           NAVIGATION (MOBILE & DESKTOP)
+           ========================================
+        */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            height: 75px;
+            background: var(--card);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 1000;
+            padding-bottom: env(safe-area-inset-bottom);
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.1);
+        }
+
+        .b-nav-item {
+            display: flex; flex-direction: column; align-items: center;
+            color: var(--txt-m); font-size: 10px; font-weight: 700; gap: 4px;
+            transition: all 0.3s ease; cursor: pointer; flex: 1;
+        }
+
+        .b-nav-item.active { color: var(--p); transform: translateY(-2px); }
+        .b-nav-item svg { width: 22px; height: 22px; stroke-width: 2.5px; }
+
+        .sidebar {
+            position: fixed; left: 0; top: 0; bottom: 0; width: 280px;
+            background: var(--card); border-right: 1px solid var(--border);
+            display: none; flex-direction: column; padding: 40px 24px; z-index: 1000;
+        }
+
+        .main-container { padding: 24px; min-height: 100vh; margin-bottom: 100px; }
+
+        @media (min-width: 1024px) {
+            .sidebar { display: flex; }
+            .bottom-nav { display: none; }
+            .main-container { margin-left: 280px; padding: 60px; }
+        }
+
+        /* ========================================
+           UI COMPONENTS
+           ========================================
+        */
+        .glass-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: var(--shadow);
+            position: relative;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-btn {
+            display: flex; align-items: center; gap: 14px; padding: 16px;
+            border-radius: var(--radius-md); cursor: pointer; color: var(--txt-m);
+            font-weight: 700; transition: all 0.3s; border: none;
+            background: transparent; width: 100%; text-align: left;
+        }
+
+        .nav-btn.active { background: var(--p-l); color: var(--p); }
+        .nav-btn:hover:not(.active) { background: var(--p-l); color: var(--txt); }
+
+        .btn-auth-google {
+            background: var(--p); color: white; padding: 16px 24px;
+            border-radius: 16px; font-weight: 800; border: none;
+            cursor: pointer; display: flex; align-items: center; gap: 12px;
+            justify-content: center; width: 100%; transition: 0.3s;
+        }
+
+        .btn-auth-google:active { transform: scale(0.95); }
+
+        .fab {
+            position: fixed; bottom: 100px; right: 24px;
+            width: 60px; height: 60px; background: var(--p);
+            color: white; border-radius: 20px; display: flex;
+            align-items: center; justify-content: center;
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+            cursor: pointer; z-index: 2000; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .fab:hover { transform: scale(1.1) rotate(90deg); }
+
+        /* ========================================
+           MODALS & OVERLAYS
+           ========================================
+        */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(12px); display: none; align-items: center;
+            justify-content: center; z-index: 5000; padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+
+        .modal-body {
+            background: var(--card); width: 100%; max-width: 500px;
+            border-radius: 30px; padding: 32px; position: relative;
+            animation: modalIn 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+            overflow-y: auto; max-height: 90vh; border: 1px solid var(--border);
+        }
+
+        @keyframes modalIn { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* ========================================
+           INPUT STYLING
+           ========================================
+        */
+        input, select {
+            width: 100%; padding: 16px; border-radius: 14px;
+            border: 1px solid var(--border); background: var(--bg);
+            color: var(--txt); font-size: 15px; margin-top: 8px;
+            outline: none; transition: 0.3s;
+        }
+
+        input:focus, select:focus { border-color: var(--p); box-shadow: 0 0 0 4px var(--p-l); }
+
+        label { font-size: 12px; font-weight: 800; color: var(--txt-m); text-transform: uppercase; margin-top: 15px; display: block; }
+
+        /* ========================================
+           ACTIVITY LOG STYLING
+           ========================================
+        */
+        .activity-item {
+            display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid var(--border);
+        }
+        .activity-icon {
+            width: 35px; height: 35px; border-radius: 10px; background: var(--p-l);
+            display: flex; align-items: center; justify-content: center; color: var(--p);
+            font-size: 14px; flex-shrink: 0;
+        }
+        .activity-text b { color: var(--txt); font-weight: 700; }
+        .activity-text p { font-size: 13px; color: var(--txt-m); }
+        .activity-time { font-size: 11px; color: var(--p); font-weight: 800; margin-top: 4px; }
+
+        /* ========================================
+           TABLE & LISTS
+           ========================================
+        */
+        .category-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+        .cat-item-card { height: 220px; border-radius: var(--radius-lg); overflow: hidden; position: relative; cursor: pointer; border: 1px solid var(--border); }
+        .cat-img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.5); transition: 0.5s; }
+        .cat-item-card:hover .cat-img { transform: scale(1.1); filter: brightness(0.7); }
+        .cat-info { position: absolute; bottom: 24px; left: 24px; right: 24px; }
+
+        .detail-img { width: 100%; height: 300px; object-fit: cover; border-radius: 20px; margin-bottom: 20px; }
+        .detail-scroll { max-height: 250px; overflow-y: auto; padding-right: 10px; margin-top: 15px; }
+
+        .low-stock-pill { background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; }
+
+        /* ANIMATIONS */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .view-section { display: none; }
+        .view-section.active { display: block; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ========================================
+           CONTEXT MENU
+           ========================================
+        */
+        #ctx-menu {
+            position: fixed; z-index: 10000; width: 220px;
+            background: var(--ctx-bg); backdrop-filter: blur(12px);
+            border: 1px solid var(--border); border-radius: 14px;
+            box-shadow: var(--shadow); display: none; flex-direction: column; padding: 8px;
+        }
+        .ctx-item {
+            padding: 12px 14px; font-size: 13px; font-weight: 700;
+            border-radius: 10px; display: flex; align-items: center; gap: 12px;
+            cursor: pointer; transition: 0.2s; color: var(--txt);
+        }
+        .ctx-item:hover { background: var(--p); color: white; }
+        .ctx-item.danger:hover { background: var(--err); }
+    </style>
+</head>
+<body data-theme="dark">
+
+    <div id="splash" style="position:fixed; inset:0; background:var(--bg); z-index:100000; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+        <div style="width:60px; height:60px; border:5px solid var(--p-l); border-top-color:var(--p); border-radius:50%; animation: spin 1s linear infinite;"></div>
+        <h2 style="margin-top:20px; font-weight:800; color:var(--txt);">Initializing Secure Access...</h2>
+    </div>
+
+    <div id="auth-view" style="min-height:100vh; display:none; align-items:center; justify-content:center; padding:24px; background:var(--bg);">
+        <div class="glass-card" style="text-align:center; max-width:400px; width:100%;">
+            <div style="font-size:60px; margin-bottom:10px;">🛡️</div>
+            <h1 style="font-weight:900; margin-bottom:5px;">Enterprise Access</h1>
+            <p id="auth-msg" style="color:var(--txt-m); margin-bottom:30px; font-size:14px;">Sign in to MyStock Console</p>
+            
+            <div style="display:flex; flex-direction:column; gap:8px; text-align:left;">
+                <label>Credentials</label>
+                <input type="email" id="email-in" placeholder="admin@enterprise.com">
+                <input type="password" id="pass-in" placeholder="••••••••">
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin: 24px 0;">
+                <button class="btn-auth-google" onclick="App.Auth.signInEmail()">Secure Login</button>
+                <button class="nav-btn" style="background:var(--border); justify-content:center;" onclick="App.Auth.signUpEmail()">Create ID</button>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">
+                <div style="flex:1; height:1px; background:var(--border);"></div>
+                <span style="font-size:11px; font-weight:800; color:var(--txt-m);">SECURE GATEWAY</span>
+                <div style="flex:1; height:1px; background:var(--border);"></div>
+            </div>
+
+            <button class="btn-auth-google" onclick="App.Auth.signInGoogle()" style="background:#fff; color:#000; border: 1px solid #ddd;">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" width="18" style="margin-right:10px;">
+                Continue with Google
+            </button>
+        </div>
+    </div>
+
+    <div id="ctx-menu">
+        <div id="ctx-global">
+            <div class="ctx-item" onclick="location.reload()">Sync Database</div>
+            <div class="ctx-item" onclick="App.UI.toggleTheme()">Switch Theme</div>
+            <div class="ctx-item" onclick="App.UI.showLowStock()">Check Inventory Alerts</div>
+        </div>
+        <div id="ctx-selection" style="display:none;">
+            <div style="height:1px; background:var(--border); margin:8px 4px;"></div>
+            <div class="ctx-item" id="ctx-edit">Update Entry</div>
+            <div class="ctx-item danger" id="ctx-delete">Remove Permanently</div>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <div class="b-nav-item active" onclick="App.Router.go('dash', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            Dashboard
+        </div>
+        <div class="b-nav-item" onclick="App.Router.go('inv', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+            Stock
+        </div>
+        <div class="b-nav-item" onclick="App.Router.go('rep', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2v20m8-16H4m16 12H4"></path><circle cx="12" cy="12" r="9"></circle></svg>
+            Sale
+        </div>
+        <div class="b-nav-item" onclick="App.Router.go('profile', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            Profile
+        </div>
+    </div>
+
+    <aside class="sidebar">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:40px;">
+            <div style="width:40px; height:40px; background:var(--p); border-radius:12px; display:flex; align-items:center; justify-content:center; color:white; font-weight:900;">M</div>
+            <h2 style="font-weight:900; letter-spacing:-1px;">MyStock</h2>
+        </div>
+        <nav style="flex:1; display:flex; flex-direction:column; gap:8px;">
+            <button class="nav-btn active" onclick="App.Router.go('dash', this)">Dashboard</button>
+            <button class="nav-btn" onclick="App.Router.go('inv', this)">Inventory Management</button>
+            <button class="nav-btn" onclick="App.Router.go('rep', this)">Sales & History</button>
+            <button class="nav-btn" onclick="App.Router.go('profile', this)">User Settings</button>
+        </nav>
+        <button class="nav-btn" style="color:var(--err); margin-top:20px; background:var(--p-l);" onclick="App.Auth.signOut()">Sign Out</button>
+    </aside>
+
+    <main class="main-container" id="app-shell" style="display:none;">
+        <header style="margin-bottom:40px; display:flex; justify-content:space-between; align-items:flex-end;">
+            <div>
+                <p id="view-crumb" style="font-size:11px; font-weight:800; color:var(--p); text-transform:uppercase; letter-spacing:1px;">Internal System</p>
+                <h1 id="view-title" style="font-size:32px; font-weight:900; letter-spacing:-1px;">Overview</h1>
+            </div>
+            <div id="top-date" style="font-size:12px; font-weight:700; color:var(--txt-m);"></div>
+        </header>
+
+        <section id="view-dash" class="view-section active">
+            <div class="stat-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:20px; margin-bottom:30px;">
+                <div class="glass-card" style="background:var(--p); color:white; border:none;">
+                    <p style="font-weight:700; opacity:0.8; font-size:11px; text-transform:uppercase;">Gross Sales</p>
+                    <h2 id="dash-rev" style="font-size:28px; font-weight:900;">0.00 ETB</h2>
+                </div>
+                <div class="glass-card">
+                    <p style="font-weight:700; color:var(--txt-m); font-size:11px; text-transform:uppercase;">Retail Inventory Value</p>
+                    <h2 id="dash-val" style="font-size:28px; font-weight:900;">0.00 ETB</h2>
+                </div>
+            </div>
+
+            <div class="glass-card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h3 style="font-weight:900; font-size:18px;">System Activity Log</h3>
+                    <span style="font-size:11px; color:var(--p); font-weight:800; cursor:pointer;" onclick="App.Utils.clearLog()">Clear History</span>
+                </div>
+                <div id="activity-log-list" style="max-height:400px; overflow-y:auto;">
+                    </div>
+            </div>
+        </section>
+
+        <section id="view-inv" class="view-section">
+            <div style="position:sticky; top:0; background:var(--bg); z-index:100; padding-bottom:20px;">
+                <input id="inv-search" placeholder="🔍 Filter categories or products..." oninput="App.UI.refresh()">
+            </div>
+            <div id="inv-back" style="display:none; margin-bottom:20px; color:var(--p); font-weight:800; cursor:pointer; align-items:center; gap:8px;" onclick="App.Inventory.renderCats()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                Back to Collections
+            </div>
+            <div id="inv-grid" class="category-grid"></div>
+        </section>
+
+        <section id="view-rep" class="view-section">
+            <div style="display:flex; gap:12px; margin-bottom:24px; align-items:center;">
+                <button class="nav-btn" style="width: auto; background: var(--p); color:white;" onclick="App.Sales.openUniversalPicker()">+ Add New Sale</button>
+                <div style="flex:1"></div>
+                <button class="nav-btn" style="width: auto; background: var(--border);" onclick="App.State.sortHist = 'date'; App.UI.refresh()">By Date</button>
+                <button class="nav-btn" style="width: auto; background: var(--border);" onclick="App.State.sortHist = 'total'; App.UI.refresh()">By Amount</button>
+            </div>
+            <div id="rep-list" style="display:flex; flex-direction:column; gap:12px;"></div>
+        </section>
+
+        <section id="view-profile" class="view-section">
+            <div class="glass-card" style="text-align:center; max-width:500px; margin:0 auto;">
+                <div id="user-avatar" style="width:100px; height:100px; border-radius:30px; background:var(--p-l); color:var(--p); display:flex; align-items:center; justify-content:center; font-size:40px; font-weight:900; margin:0 auto 24px; border:2px solid var(--p);">?</div>
+                <h2 id="user-email" style="font-weight:900; font-size:20px; margin-bottom:5px;">user@enterprise.com</h2>
+                <p style="color:var(--txt-m); font-size:13px; margin-bottom:32px;">Authorized System Administrator</p>
+                
+                <div style="display:grid; grid-template-columns: 1fr; gap:12px;">
+                    <button class="nav-btn" style="background:var(--border); justify-content:center;" onclick="App.UI.toggleTheme()">Toggle Visual Mode</button>
+                    <button class="nav-btn" style="background:var(--err); color:white; justify-content:center;" onclick="App.Auth.signOut()">Secure Sign Out</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div class="fab" onclick="App.Inventory.handleFab()">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    </div>
+
+    <div id="m-detail" class="modal-overlay" onclick="App.UI.closeModal(event)">
+        <div class="modal-body">
+            <img id="detail-img" class="detail-img" src="">
+            <h1 id="detail-name" style="font-size:28px; font-weight:900; margin-bottom:5px;">Product Name</h1>
+            <p id="detail-price" style="color:var(--p); font-weight:800; font-size:22px;">0.00 ETB</p>
+            <div class="detail-scroll">
+                <p id="detail-qty" style="font-weight:800; color:var(--suc); margin-bottom:10px;">Available: 0 Units</p>
+                <p style="color:var(--txt-m); font-size:14px; line-height:1.7;">
+                    This item is registered in the enterprise catalog. You can perform stock adjustments via the context menu or process a sale below.
+                </p>
+            </div>
+            <button class="btn-auth-google" style="margin-top:30px;" onclick="App.Sales.initFromDetail()">PROCESS SALE</button>
+        </div>
+    </div>
+
+    <div id="m-picker" class="modal-overlay" onclick="App.UI.closeModal(event)">
+        <div class="modal-body">
+            <h2 style="font-weight:900; margin-bottom:20px;">Choose Product to Sell</h2>
+            <input id="picker-search" placeholder="Search across all stock..." oninput="App.Sales.filterPicker()">
+            <div id="picker-list" style="margin-top:20px; display:flex; flex-direction:column; gap:10px; max-height:400px; overflow-y:auto;"></div>
+        </div>
+    </div>
+
+    <div id="m-sell" class="modal-overlay" onclick="App.UI.closeModal(event)">
+        <div class="modal-body" style="text-align:center;">
+            <p style="font-size:11px; font-weight:800; color:var(--p); text-transform:uppercase;">Processing Transaction</p>
+            <h2 id="sell-name" style="font-weight:900; font-size:24px; margin-bottom:20px;"></h2>
+            
+            <div style="display:flex; align-items:center; justify-content:center; gap:40px; margin:30px 0;">
+                <div class="fab" style="position:static; width:50px; height:50px;" onclick="App.Sales.step(-1)">-</div>
+                <span id="sell-val" style="font-size:60px; font-weight:900;">1</span>
+                <div class="fab" style="position:static; width:50px; height:50px;" onclick="App.Sales.step(1)">+</div>
+            </div>
+
+            <div style="text-align:left; margin-bottom:30px;">
+                <label>Price Type</label>
+                <select id="sell-price-type">
+                    <option value="Cash">Cash Transaction</option>
+                    <option value="Account">On Account / Credit</option>
+                </select>
+            </div>
+
+            <button class="btn-auth-google" onclick="App.Sales.confirm()">Complete Sale</button>
+        </div>
+    </div>
+
+    <div id="m-low" class="modal-overlay" onclick="App.UI.closeModal(event)">
+        <div class="modal-body">
+            <h2 style="font-weight:900; margin-bottom:20px;">Critical Stock Alert</h2>
+            <div id="low-list" style="display:flex; flex-direction:column; gap:15px;"></div>
+            <button class="nav-btn" style="margin-top:20px; background:var(--border); justify-content:center;" onclick="App.UI.closeAll()">Dismiss Alerts</button>
+        </div>
+    </div>
+
+    <div id="m-cat" class="modal-overlay" onclick="App.UI.closeModal(event)"><div class="modal-body"><h2 style="font-weight:900; margin-bottom:20px;">Create Collection</h2><label>Name</label><input id="in-c-name" placeholder="Electronics, Clothing..."><label>Thumbnail</label><input type="file" id="in-c-file" accept="image/*"><button class="btn-auth-google" style="margin-top:30px;" onclick="App.Inventory.saveCat()">Register Collection</button></div></div>
+    
+    <div id="m-item" class="modal-overlay" onclick="App.UI.closeModal(event)"><div class="modal-body"><h2 style="font-weight:900; margin-bottom:20px;">New Product Entry</h2><label>Product Name</label><input id="in-i-name" placeholder="Item Name"><div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;"><div style="flex:1"><label>Retail Price</label><input id="in-i-price" type="number" placeholder="ETB"></div><div style="flex:1"><label>Quantity</label><input id="in-i-qty" type="number" placeholder="Units"></div></div><label>Image</label><input type="file" id="in-i-file" accept="image/*"><button class="btn-auth-google" style="margin-top:30px;" onclick="App.Inventory.saveItem()">Add to Inventory</button></div></div>
+
+    <script>
+        /* ========================================
+           APP CONFIGURATION & STATE
+           ========================================
+        */
+        const firebaseConfig = {
+            apiKey: "AIzaSyC0OhVBGP2cIgAVz2AejPeB4OSPwWbh6Ao",
+            authDomain: "inventory-faa63.firebaseapp.com",
+            databaseURL: "https://inventory-faa63-default-rtdb.firebaseio.com",
+            projectId: "inventory-faa63",
+            storageBucket: "inventory-faa63.firebasestorage.app",
+            messagingSenderId: "88857811718",
+            appId: "1:88857811718:web:a0ed2b0f8707e9dd0e9c87"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth(), db = firebase.database();
+
+        const App = {
+            State: { 
+                cats: [], 
+                hist: [], 
+                logs: [],
+                sortHist: 'date' 
+            },
+            Active: { 
+                cat: null, 
+                edit: null, 
+                sQty: 1, 
+                sTarget: null, 
+                detailTarget: null 
+            },
+            
+            /* HELPER UTILITIES */
+            N: (v) => { const n = parseFloat(v); return isNaN(n) ? 0 : n; },
+            
+            Utils: {
+                log: (msg, type = 'info') => {
+                    const icon = type === 'sale' ? '💰' : type === 'auth' ? '🔑' : '⚙️';
+                    const entry = { icon, msg, time: new Date().toLocaleTimeString(), raw: Date.now() };
+                    App.State.logs.unshift(entry);
+                    if(App.State.logs.length > 50) App.State.logs.pop();
+                    App.Sync.save();
+                },
+                clearLog: () => {
+                    if(confirm("Permanently clear activity history?")) {
+                        App.State.logs = [];
+                        App.Sync.save();
+                    }
+                },
+                getReadableDate: () => {
+                    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                    return new Date().toLocaleDateString(undefined, options);
+                }
+            },
+
+            /* AUTHENTICATION MODULE */
+            Auth: {
+                init: () => {
+                    document.getElementById('top-date').innerText = App.Utils.getReadableDate();
+                    auth.onAuthStateChanged(user => {
+                        document.getElementById('splash').style.display = 'none';
+                        if(user) {
+                            document.getElementById('auth-view').style.display = 'none';
+                            document.getElementById('app-shell').style.display = 'block';
+                            document.getElementById('user-email').innerText = user.email;
+                            document.getElementById('user-avatar').innerText = user.email[0].toUpperCase();
+                            App.Sync.start(user.uid);
+                        } else {
+                            document.getElementById('auth-view').style.display = 'flex';
+                            document.getElementById('app-shell').style.display = 'none';
+                        }
+                    });
+                },
+                signInGoogle: () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()),
+                signInEmail: () => {
+                    const e = document.getElementById('email-in').value;
+                    const p = document.getElementById('pass-in').value;
+                    if(!e || !p) return alert("Credentials required");
+                    auth.signInWithEmailAndPassword(e, p)
+                        .then(() => App.Utils.log("Logged in via Email", "auth"))
+                        .catch(err => alert(err.message));
+                },
+                signUpEmail: () => {
+                    const e = document.getElementById('email-in').value;
+                    const p = document.getElementById('pass-in').value;
+                    if(!e || !p) return alert("Fill all fields");
+                    auth.createUserWithEmailAndPassword(e, p).catch(err => alert(err.message));
+                },
+                signOut: () => {
+                    if(confirm("r u sure man?")) {
+                        auth.signOut();
+                    }
+                }
+            },
+
+            /* DATA SYNC MODULE */
+            Sync: {
+                start: (uid) => {
+                    db.ref('users/' + uid).on('value', snap => {
+                        const d = snap.val() || {};
+                        App.State.cats = d.categories || [];
+                        App.State.hist = d.history || [];
+                        App.State.logs = d.logs || [];
+                        App.UI.refresh();
+                    });
+                },
+                save: () => {
+                    if(!auth.currentUser) return;
+                    db.ref('users/' + auth.currentUser.uid).set({
+                        categories: App.State.cats,
+                        history: App.State.hist,
+                        logs: App.State.logs
+                    });
+                }
+            },
+
+            /* INVENTORY LOGIC */
+            Inventory: {
+                handleFab: () => {
+                    App.Active.edit = null;
+                    if(App.Active.cat) App.UI.openM('m-item');
+                    else App.UI.openM('m-cat');
+                },
+                renderCats: (query = '') => {
+                    App.Active.cat = null;
+                    document.getElementById('inv-back').style.display = 'none';
+                    const grid = document.getElementById('inv-grid');
+                    const filtered = App.State.cats.filter(c => c.name.toLowerCase().includes(query.toLowerCase()));
+                    grid.innerHTML = filtered.map(c => `
+                        <div class="cat-item-card" data-id="${c.id}" data-type="cat" onclick="App.Inventory.openCat('${c.id}')">
+                            <img src="${c.img || ''}" class="cat-img">
+                            <div class="cat-info">
+                                <h3 style="color:white; font-weight:900;">${c.name}</h3>
+                                <p style="color:rgba(255,255,255,0.7); font-size:12px;">${(c.items||[]).length} Products Registered</p>
+                            </div>
+                        </div>
+                    `).join('') || '<div style="padding:40px; text-align:center; color:var(--txt-m);">No collections found.</div>';
+                },
+                openCat: (id, query = '') => {
+                    App.Active.cat = id;
+                    document.getElementById('inv-back').style.display = 'flex';
+                    const cat = App.State.cats.find(x => x.id === id);
+                    const filtered = (cat.items || []).filter(i => i.name.toLowerCase().includes(query.toLowerCase()));
+                    document.getElementById('inv-grid').innerHTML = filtered.map(i => `
+                        <div class="glass-card item-row" data-id="${i.id}" data-type="item" style="display:flex; align-items:center; gap:15px; padding:12px; cursor:pointer;" onclick="App.Inventory.showDetail('${i.id}')">
+                            <img src="${i.img || ''}" style="width:65px; height:65px; border-radius:15px; object-fit:cover;">
+                            <div style="flex:1">
+                                <h4 style="font-weight:800; font-size:15px;">${i.name}</h4>
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <span style="color:var(--p); font-weight:800; font-size:14px;">${i.price} ETB</span>
+                                    ${i.qty < 5 ? '<span class="low-stock-pill">LOW STOCK</span>' : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('') || '<p style="padding:20px; color:var(--txt-m);">No products in this collection.</p>';
+                },
+                showDetail: (id) => {
+                    const cat = App.State.cats.find(x => x.id === App.Active.cat);
+                    const item = cat.items.find(i => i.id === id);
+                    App.Active.detailTarget = { catId: cat.id, itemId: item.id };
+                    document.getElementById('detail-img').src = item.img || '';
+                    document.getElementById('detail-name').innerText = item.name;
+                    document.getElementById('detail-price').innerText = item.price.toLocaleString() + " ETB";
+                    document.getElementById('detail-qty').innerText = "Available: " + item.qty + " Units";
+                    App.UI.openM('m-detail');
+                },
+                saveCat: async () => {
+                    const name = document.getElementById('in-c-name').value;
+                    if(!name) return;
+                    const f = document.getElementById('in-c-file').files[0];
+                    let img = App.Active.edit ? App.State.cats.find(x=>x.id===App.Active.edit).img : '';
+                    if(f) img = await App.UI.b64(f);
+                    if(App.Active.edit) { 
+                        const c = App.State.cats.find(x=>x.id===App.Active.edit); 
+                        c.name = name; c.img = img;
+                        App.Utils.log(`Updated collection: ${name}`);
+                    } else { 
+                        App.State.cats.push({ id: 'c'+Date.now(), name, img, items: [] });
+                        App.Utils.log(`Created new collection: ${name}`);
+                    }
+                    App.Sync.save(); App.UI.closeAll();
+                },
+                saveItem: async () => {
+                    const cat = App.State.cats.find(x=>x.id===App.Active.cat);
+                    const name = document.getElementById('in-i-name').value;
+                    if(!name) return;
+                    const f = document.getElementById('in-i-file').files[0];
+                    let img = App.Active.edit ? cat.items.find(x=>x.id===App.Active.edit).img : '';
+                    if(f) img = await App.UI.b64(f);
+                    const obj = { id: App.Active.edit || 'i'+Date.now(), name, price: App.N(document.getElementById('in-i-price').value), qty: App.N(document.getElementById('in-i-qty').value), img };
+                    if(App.Active.edit) { 
+                        const idx = cat.items.findIndex(x=>x.id===App.Active.edit); 
+                        cat.items[idx] = obj;
+                        App.Utils.log(`Updated product: ${name}`);
+                    } else { 
+                        if(!cat.items) cat.items = []; 
+                        cat.items.push(obj);
+                        App.Utils.log(`Added product: ${name} to ${cat.name}`);
+                    }
+                    App.Sync.save(); App.UI.closeAll();
+                }
+            },
+
+            /* SALES TRANSACTION MODULE */
+            Sales: {
+                openUniversalPicker: () => {
+                    App.Sales.filterPicker();
+                    App.UI.openM('m-picker');
+                },
+                filterPicker: () => {
+                    const q = document.getElementById('picker-search').value.toLowerCase();
+                    let html = '';
+                    App.State.cats.forEach(c => {
+                        (c.items || []).forEach(i => {
+                            if(i.name.toLowerCase().includes(q)) {
+                                html += `
+                                    <div class="glass-card" style="padding:12px; display:flex; align-items:center; gap:12px; cursor:pointer;" onclick="App.Sales.init('${c.id}', '${i.id}')">
+                                        <img src="${i.img}" style="width:40px; height:40px; border-radius:10px; object-fit:cover;">
+                                        <div style="flex:1">
+                                            <b style="font-size:14px;">${i.name}</b><br>
+                                            <span style="font-size:12px; color:var(--txt-m);">${i.qty} in stock</span>
+                                        </div>
+                                        <b style="color:var(--p);">${i.price} ETB</b>
+                                    </div>
+                                `;
+                            }
+                        });
+                    });
+                    document.getElementById('picker-list').innerHTML = html || '<p>No matching stock.</p>';
+                },
+                initFromDetail: () => {
+                    const t = App.Active.detailTarget;
+                    App.Sales.init(t.catId, t.itemId);
+                },
+                init: (cId, iId) => {
+                    App.UI.closeAll();
+                    const cat = App.State.cats.find(x=>x.id===cId);
+                    App.Active.sTarget = cat.items.find(i=>i.id===iId);
+                    App.Active.sQty = 1;
+                    document.getElementById('sell-name').innerText = App.Active.sTarget.name;
+                    document.getElementById('sell-val').innerText = "1";
+                    App.UI.openM('m-sell');
+                },
+                step: (n) => {
+                    const next = App.Active.sQty + n;
+                    if(next > 0 && next <= App.Active.sTarget.qty) {
+                        App.Active.sQty = next;
+                        document.getElementById('sell-val').innerText = next;
+                    }
+                },
+                confirm: () => {
+                    if(!confirm("r u sure u sold it man?")) return;
+                    
+                    const itm = App.Active.sTarget;
+                    const type = document.getElementById('sell-price-type').value;
+                    const total = itm.price * App.Active.sQty;
+                    
+                    itm.qty -= App.Active.sQty;
+                    App.State.hist.unshift({ 
+                        name: itm.name, 
+                        total: total, 
+                        qty: App.Active.sQty, 
+                        type: type,
+                        time: new Date().toLocaleTimeString(), 
+                        rawDate: Date.now() 
+                    });
+                    
+                    App.Utils.log(`Sold ${App.Active.sQty}x ${itm.name} (${type})`, "sale");
+                    App.Sync.save(); 
+                    App.UI.closeAll();
+                }
+            },
+
+            /* UI RENDERING & CORE LOGIC */
+            UI: {
+                refresh: () => {
+                    let rev = 0, val = 0;
+                    const query = document.getElementById('inv-search').value;
+                    
+                    // Stats calculation
+                    App.State.hist.forEach(h => rev += App.N(h.total));
+                    App.State.cats.forEach(c => (c.items||[]).forEach(i => val += App.N(i.qty) * App.N(i.price)));
+                    
+                    document.getElementById('dash-rev').innerText = rev.toLocaleString() + " ETB";
+                    document.getElementById('dash-val').innerText = val.toLocaleString() + " ETB";
+                    
+                    // Render Activity Log
+                    document.getElementById('activity-log-list').innerHTML = App.State.logs.map(l => `
+                        <div class="activity-item">
+                            <div class="activity-icon">${l.icon}</div>
+                            <div class="activity-text">
+                                <p>${l.msg}</p>
+                                <div class="activity-time">${l.time}</div>
+                            </div>
+                        </div>
+                    `).join('') || '<p style="padding:20px; color:var(--txt-m); font-size:13px;">No recent activity.</p>';
+
+                    // Render Sales/History
+                    const sortedHist = [...App.State.hist].sort((a,b) => App.State.sortHist === 'total' ? b.total - a.total : b.rawDate - a.rawDate);
+                    document.getElementById('rep-list').innerHTML = sortedHist.map(h => `
+                        <div class="glass-card" style="padding:15px; display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <b style="font-size:15px;">${h.name}</b> <span style="color:var(--txt-m); font-size:12px;">(x${h.qty})</span>
+                                <div style="font-size:11px; color:var(--txt-m); margin-top:4px;">${h.time} • <span style="color:var(--p); font-weight:800;">${h.type}</span></div>
+                            </div>
+                            <div style="font-weight:900; color:var(--suc);">${h.total.toLocaleString()} ETB</div>
+                        </div>
+                    `).join('') || '<p style="padding:40px; text-align:center; color:var(--txt-m);">No transactions recorded.</p>';
+
+                    // Inventory refresh
+                    if(App.Active.cat) App.Inventory.openCat(App.Active.cat, query);
+                    else App.Inventory.renderCats(query);
+                },
+                showLowStock: () => {
+                    let low = [];
+                    App.State.cats.forEach(c => (c.items||[]).forEach(i => { if(i.qty < 5) low.push(i); }));
+                    document.getElementById('low-list').innerHTML = low.map(l => `
+                        <div class="glass-card" style="display:flex; align-items:center; gap:15px; padding:12px; margin-bottom:10px;">
+                            <img src="${l.img || ''}" style="width:45px; height:45px; border-radius:10px; object-fit:cover;">
+                            <div style="flex:1"><b>${l.name}</b></div>
+                            <div style="color:var(--err); font-weight:900; background:rgba(239,68,68,0.1); padding:5px 10px; border-radius:8px;">${l.qty} left</div>
+                        </div>
+                    `).join('') || '<p style="padding:20px; text-align:center;">All stock levels are optimal.</p>';
+                    App.UI.openM('m-low');
+                },
+                toggleTheme: () => {
+                    const b = document.body;
+                    const next = b.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                    b.setAttribute('data-theme', next);
+                },
+                openM: id => document.getElementById(id).classList.add('active'),
+                closeAll: () => document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')),
+                closeModal: e => { if(e.target.classList.contains('modal-overlay')) App.UI.closeAll(); },
+                b64: f => new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result); r.readAsDataURL(f); })
+            },
+
+            /* ROUTING MODULE */
+            Router: {
+                go: (v, el) => {
+                    document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+                    document.getElementById('view-'+v).classList.add('active');
+                    document.querySelectorAll('.b-nav-item, .nav-btn').forEach(b => b.classList.remove('active'));
+                    
+                    // Update header titles
+                    const titles = { dash: 'System Overview', inv: 'Stock Control', rep: 'Sales & Revenue', profile: 'User Terminal' };
+                    document.getElementById('view-title').innerText = titles[v];
+                    document.getElementById('view-crumb').innerText = v === 'dash' ? 'Internal System' : 'Internal System / ' + v;
+                    
+                    // Active nav styling
+                    if(el) el.classList.add('active');
+                    else {
+                        // For sidebar desktop clicks
+                        const items = document.querySelectorAll(`.b-nav-item`);
+                        items.forEach(i => { if(i.innerText.toLowerCase().includes(v.substring(0,3))) i.classList.add('active'); });
+                    }
+                    
+                    if(v === 'inv' || v === 'rep' || v === 'dash') App.UI.refresh();
+                }
+            },
+
+            /* CONTEXTUAL ACTIONS */
+            Context: {
+                show: (e) => {
+                    e.preventDefault();
+                    const menu = document.getElementById('ctx-menu');
+                    const selection = document.getElementById('ctx-selection');
+                    const target = e.target.closest('.cat-item-card') || e.target.closest('.item-row');
+                    
+                    menu.style.top = e.clientY + 'px'; 
+                    menu.style.left = e.clientX + 'px'; 
+                    menu.style.display = 'flex';
+                    
+                    if(target) {
+                        selection.style.display = 'block';
+                        const id = target.getAttribute('data-id');
+                        const type = target.getAttribute('data-type');
+                        
+                        document.getElementById('ctx-edit').onclick = () => {
+                            App.Active.edit = id;
+                            if(type === 'cat') App.UI.openM('m-cat');
+                            else App.UI.openM('m-item');
+                        };
+                        
+                        document.getElementById('ctx-delete').onclick = () => {
+                            if(!confirm("r u sure man? This cannot be undone.")) return;
+                            if(type === 'cat') {
+                                App.State.cats = App.State.cats.filter(x => x.id !== id);
+                                App.Utils.log("Deleted a collection");
+                            } else {
+                                const cat = App.State.cats.find(x => x.id === App.Active.cat);
+                                cat.items = cat.items.filter(x => x.id !== id);
+                                App.Utils.log("Deleted a product");
+                            }
+                            App.Sync.save();
+                        };
+                    } else { selection.style.display = 'none'; }
+                },
+                hide: () => document.getElementById('ctx-menu').style.display = 'none'
+            }
+        };
+
+        // GLOBAL LISTENERS
+        window.onclick = () => App.Context.hide();
+        document.oncontextmenu = (e) => App.Context.show(e);
+
+        // INITIALIZE
+        App.Auth.init();
+    </script>
+</body>
+</html>
